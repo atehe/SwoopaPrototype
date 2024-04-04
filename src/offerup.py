@@ -3,13 +3,14 @@ import json
 import pandas as pd
 from datetime import datetime
 import os
+import argparse
 
 API_URL = "https://offerup.com/api/graphql"
 HEADERS = {
     "Content-Type": "application/json",
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
 }
-DATA_FOLDER = "./data/offerup/"
+DATA_FOLDER = "./data/offerup"
 LISTINGS_DB = f"{DATA_FOLDER}/LISING_DB.csv"
 
 os.makedirs(DATA_FOLDER, exist_ok=True)
@@ -20,8 +21,8 @@ class OfferUp:
     def __init__(
         self,
         query: str,
-        lat: float,
-        long: float,
+        lat: str,
+        long: str,
         distance: str = "50",
         limit: str = "50",
         sort_by: str = "-posted",
@@ -138,6 +139,22 @@ class OfferUp:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-q", "--query", help="Search Query", type=str, required=True)
+    parser.add_argument(
+        "-la", "--lat", help="Latitude of search location", type=str, default="40.7128"
+    )
+    parser.add_argument(
+        "-lo",
+        "--long",
+        help="Longitude of search location",
+        type=str,
+        default="-74.0060",
+    )
+    parser.add_argument(
+        "-d", "--dist", help="Distance or search radius", type=str, default="50"
+    )
+    args = parser.parse_args()
 
-    user_search = OfferUp("iphone", "40.7128", "-74.0060")
+    user_search = OfferUp(args.query, str(args.lat), str(args.long))
     user_search.check_new_listings()

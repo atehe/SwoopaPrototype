@@ -1,72 +1,92 @@
-import requests
-import json
 import pandas as pd
 from datetime import datetime
 import os
-import chromedriver_binary
+
+from parsel import Selector
 from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import chromedriver_binary  # noqa: F401
+import argparse
 
 
-API_URL = "https://offerup.com/api/graphql"
-HEADERS = {
-    "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-}
-DATA_FOLDER = "./data/offerup/"
+DATA_FOLDER = "./data/craiglist"
 LISTINGS_DB = f"{DATA_FOLDER}/LISING_DB.csv"
 
 os.makedirs(DATA_FOLDER, exist_ok=True)
 
 
-class OfferUp:
+class Craiglist:
 
     def __init__(
         self,
         query: str,
         lat: float,
         long: float,
-        limit: str = "50",
-        sort_by: str = "-posted",
+        distance: str = "50",
+        sort_by: str = "date",
     ):
         self.query = query
         self.lat = lat
         self.long = long
-        self.payload = {
-            "query": "query GetModularFeed($searchParams: [SearchParam], $debug: Boolean = false) {  modularFeed(params: $searchParams, debug: $debug) {    analyticsData {      requestId      searchPerformedEventUniqueId      searchSessionId      __typename    }    categoryInfo {      categoryId      isForcedCategory      __typename    }    feedAdditions    filters {      ...modularFilterNumericRange      ...modularFilterSelectionList      __typename    }    legacyFeedOptions {      ...legacyFeedOptionListSelection      ...legacyFeedOptionNumericRange      __typename    }    looseTiles {      ...modularTileBanner      ...modularTileBingAd      ...modularTileGoogleDisplayAd      ...modularTileJob      ...modularTileEmptyState      ...modularTileListing      ...modularTileLocalDisplayAd      ...modularTileSearchAlert      ...modularTileSellerAd      ...modularModuleTileAdsPostXAd      __typename    }    modules {      ...modularGridModule      __typename    }    pageCursor    query {      ...modularQueryInfo      __typename    }    requestTimeMetadata {      resolverComputationTimeSeconds      serviceRequestTimeSeconds      totalResolverTimeSeconds      __typename    }    searchAlert {      alertId      alertStatus      __typename    }    debugInformation @include(if: $debug) {      rankedListings {        listingId        attributes {          key          value          __typename        }        __typename      }      lastViewedItems {        listingId        attributes {          key          value          __typename        }        __typename      }      categoryAffinities {        affinity        count        decay        affinityOwner        __typename      }      rankingStats {        key        value        __typename      }      __typename    }    __typename  }}fragment modularFilterNumericRange on ModularFeedNumericRangeFilter {  isExpandedHighlight  lowerBound {    ...modularFilterNumericRangeBound    __typename  }  shortcutLabel  shortcutRank  subTitle  targetName  title  type  upperBound {    ...modularFilterNumericRangeBound    __typename  }  __typename}fragment modularFilterNumericRangeBound on ModularFeedNumericRangeFilterNumericRangeBound {  label  limit  placeholderText  targetName  value  __typename}fragment modularFilterSelectionList on ModularFeedSelectionListFilter {  targetName  title  subTitle  shortcutLabel  shortcutRank  type  isExpandedHighlight  options {    ...modularFilterSelectionListOption    __typename  }  __typename}fragment modularFilterSelectionListOption on ModularFeedSelectionListFilterOption {  isDefault  isSelected  label  subLabel  value  __typename}fragment legacyFeedOptionListSelection on FeedOptionListSelection {  label  labelShort  name  options {    default    label    labelShort    selected    subLabel    value    __typename  }  position  queryParam  type  __typename}fragment legacyFeedOptionNumericRange on FeedOptionNumericRange {  label  labelShort  leftQueryParam  lowerBound  name  options {    currentValue    label    textHint    __typename  }  position  rightQueryParam  type  units  upperBound  __typename}fragment modularTileBanner on ModularFeedTileBanner {  tileId  tileType  title  __typename}fragment modularTileBingAd on ModularFeedTileBingAd {  tileId  bingAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    adSettings {      repeatClickRefractoryPeriodMillis      __typename    }    bingClientId    clickFeedbackUrl    clickReturnUrl    contentUrl    deepLinkEnabled    experimentDataHash    image {      height      url      width      __typename    }    impressionFeedbackUrl    impressionUrls    viewableImpressionUrls    installmentInfo {      amount      description      downPayment      __typename    }    itemName    lowPrice    price    searchId    sellerName    templateFields {      key      value      __typename    }    __typename  }  tileType  __typename}fragment modularTileGoogleDisplayAd on ModularFeedTileGoogleDisplayAd {  tileId  googleDisplayAd {    ouAdId    additionalSizes    adExperimentId    adHeight    adNetwork    adPage    adRequestId    adTileType    adWidth    adaptive    channel    clickFeedbackUrl    clientId    contentUrl    customTargeting {      key      values      __typename    }    displayAdType    errorDrawable {      actionPath      listImage {        height        url        width        __typename      }      __typename    }    experimentDataHash    formatIds    impressionFeedbackUrl    personalizationProperties {      key      values      __typename    }    prebidConfigs {      key      values {        timeout        tamSlotUUID        liftoffPlacementIDs        __typename      }      __typename    }    renderLocation    searchId    searchQuery    templateId    __typename  }  tileType  __typename}fragment modularTileJob on ModularFeedTileJob {  tileId  tileType  job {    address {      city      state      zipcode      __typename    }    companyName    datePosted    image {      height      url      width      __typename    }    industry    jobId    jobListingUrl    jobOwnerId    pills {      text      type      __typename    }    title    apply {      method      value      __typename    }    wageDisplayValue    provider    __typename  }  __typename}fragment modularTileEmptyState on ModularFeedTileEmptyState {  tileId  tileType  title  description  iconType  __typename}fragment modularTileListing on ModularFeedTileListing {  tileId  listing {    ...modularListing    __typename  }  tileType  __typename}fragment modularListing on ModularFeedListing {  listingId  conditionText  flags  image {    height    url    width    __typename  }  isFirmPrice  locationName  price  title  vehicleMiles  __typename}fragment modularTileLocalDisplayAd on ModularFeedTileLocalDisplayAd {  tileId  localDisplayAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    advertiserId    businessName    callToAction    callToActionType    clickFeedbackUrl    contentUrl    experimentDataHash    headline    image {      height      url      width      __typename    }    impressionFeedbackUrl    searchId    __typename  }  tileType  __typename}fragment modularTileSearchAlert on ModularFeedTileSearchAlert {  tileId  tileType  title  __typename}fragment modularTileSellerAd on ModularFeedTileSellerAd {  tileId  listing {    ...modularListing    __typename  }  sellerAd {    ouAdId    adId    adExperimentId    adNetwork    adRequestId    adTileType    clickFeedbackUrl    experimentDataHash    impressionFeedbackUrl    searchId    __typename  }  tileType  __typename}fragment modularModuleTileAdsPostXAd on ModularFeedTileAdsPostXAd {  ...modularTileAdsPostXAd  moduleId  moduleRank  moduleType  __typename}fragment modularTileAdsPostXAd on ModularFeedTileAdsPostXAd {  tileId  adsPostXAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    clickFeedbackUrl    experimentDataHash    impressionFeedbackUrl    searchId    offer {      beacons {        noThanksClick        close        __typename      }      title      description      clickUrl      image      pixel      ctaYes      ctaNo      __typename    }    __typename  }  tileType  __typename}fragment modularGridModule on ModularFeedModuleGrid {  moduleId  collection  formFactor  grid {    actionPath    tiles {      ...modularModuleTileBingAd      ...modularModuleTileGoogleDisplayAd      ...modularModuleTileListing      ...modularModuleTileLocalDisplayAd      ...modularModuleTileSellerAd      __typename    }    __typename  }  moduleType  rank  rowIndex  searchId  subTitle  title  infoActionPath  __typename}fragment modularModuleTileBingAd on ModularFeedTileBingAd {  ...modularTileBingAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileGoogleDisplayAd on ModularFeedTileGoogleDisplayAd {  ...modularTileGoogleDisplayAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileListing on ModularFeedTileListing {  ...modularTileListing  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileLocalDisplayAd on ModularFeedTileLocalDisplayAd {  ...modularTileLocalDisplayAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileSellerAd on ModularFeedTileSellerAd {  ...modularTileSellerAd  moduleId  moduleRank  moduleType  __typename}fragment modularQueryInfo on ModularFeedQueryInfo {  appliedQuery  decisionType  originalQuery  suggestedQuery  __typename}",
-            "variables": {
-                "debug": False,
-                "searchParams": [
-                    {"key": "q", "value": self.query},
-                    {"key": "platform", "value": "web"},
-                    {"key": "lon", "value": self.long},
-                    {"key": "lat", "value": self.lat},
-                    {"key": "limit", "value": limit},
-                    {"key": "SORT", "value": sort_by},
-                ],
-            },
-        }
+        self.distance = distance
+        self.search_url = f"https://ksu.craigslist.org/search/sss?lat={self.lat}&lon={self.long}&query={self.query}&search_distance={self.distance}&sort={sort_by}"
+
+    def new_listings_filename(self):
+
+        return f"{DATA_FOLDER}/NEW_LISTINGS_{self.time_checked}.csv"
+
+    def create_browser(self):
+        options = Options()
+
+        options.add_argument("--headless")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        driver = webdriver.Chrome(options=options)
+        return driver
+
+    def wait_for(self, xpath, clickable=False, timer=5):
+        wait = WebDriverWait(self.driver, timer)
+
+        # try:
+        if clickable:
+            element = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+        else:
+            element = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
+
+        return element
+        # except TimeoutException:
+        #     print("Element not found")
 
     def get_listings(self):
-        response = requests.post(
-            API_URL, headers=HEADERS, data=json.dumps(self.payload)
-        )
+        self.driver = self.create_browser()
+        self.driver.get(self.search_url)
 
-        listings_df = self.parse_listing(response.json())
+        self.wait_for('//div[@class="cl-search-results"]//li', timer=15)
+
+        page = Selector(self.driver.page_source)
+        self.time_checked = datetime.now().timestamp()
+
+        listings_df = self.parse_listing(page)
         return listings_df
 
     def check_new_listings(self):
-        self.time_checked = datetime.now().timestamp()
         latest_listings_df = self.get_listings()
-
         if os.path.exists(LISTINGS_DB):
 
             old_listings_df = pd.read_csv(LISTINGS_DB)
 
             latest_listings_df["long"] = latest_listings_df["long"].astype(float)
             latest_listings_df["lat"] = latest_listings_df["lat"].astype(float)
+            latest_listings_df["listing_id"] = latest_listings_df["listing_id"].astype(
+                int
+            )
 
             old_listings_df["long"] = old_listings_df["long"].astype(float)
             old_listings_df["lat"] = old_listings_df["lat"].astype(float)
+            old_listings_df["listing_id"] = old_listings_df["listing_id"].astype(int)
 
             merge_df = latest_listings_df.merge(
                 old_listings_df[["listing_id", "query", "long", "lat"]],
@@ -83,7 +103,7 @@ class OfferUp:
         print(
             f"Found {len(new_listings_df)} new listings for {self.query} in lat {self.lat} and long {self.long}"
         )
-        new_listings_df.to_csv(f"offerup_new_{self.time_checked}.csv", index=None)
+        new_listings_df.to_csv(self.new_listings_filename(), index=None)
 
         ## Add new listing df to the listing db so notification doesnt come up again
         if "_merge" in new_listings_df.columns:
@@ -92,49 +112,60 @@ class OfferUp:
         new_listings_df.to_csv(
             LISTINGS_DB, mode="a", index=None, header=not os.path.exists(LISTINGS_DB)
         )
+        self.driver.quit()
 
-    def parse_listing(self, listing_json: dict):
+    def parse_listing(self, page):
 
-        records = listing_json.get("data").get("modularFeed").get("looseTiles")
+        records = page.xpath('//div[@class="cl-search-results"]//li')
         listing_data = []
 
         for record in records:
-            if record.get("tileType").lower() == "listing":
-                listing = record.get("listing")
-                listing_id = listing.get("listingId")
-                condition_text = listing.get("conditionText")
-                flags = ", ".join(listing.get("flags"))
-                image_url = listing.get("image").get("url")
-                is_firm_price = listing.get("isFirmPrice")
-                location_name = listing.get("locationName")
-                price = listing.get("price")
-                title = listing.get("title")
-                vehicle_miles = listing.get("vehicleMiles")
-                url = f"https://offerup.com/item/detail/{listing_id}"
 
-                listing_data.append(
-                    {
-                        "query": self.query,
-                        "lat": self.lat,
-                        "long": self.long,
-                        "listing_id": listing_id,
-                        "condition_text": condition_text,
-                        "flags": flags,
-                        "image_url": image_url,
-                        "is_firm_price": is_firm_price,
-                        "location_name": location_name,
-                        "price": price,
-                        "title": title,
-                        "vehicle_miles": vehicle_miles,
-                        "url": url,
-                        "time_found": self.time_checked,
-                    }
-                )
+            listing_id = record.xpath(".//@data-pid").get()
+            # image_url = ", ".join(record.xpath(".//img/@src").getall())
+            price = record.xpath('.//span[@class="priceinfo"]//text()').get()
+            title = record.xpath(".//@title").get()
+            url = record.xpath(".//a/@href").get()
+            time_posted = record.xpath('.//div[@class="meta"]/text()[1]').get()
+            location = record.xpath('.//div[@class="meta"]/text()[2]').get()
+
+            listing_data.append(
+                {
+                    "query": self.query,
+                    "lat": self.lat,
+                    "long": self.long,
+                    "listing_id": listing_id,
+                    "title": title,
+                    # "image_url": image_url,
+                    "price": price,
+                    "url": url,
+                    "location": location,
+                    "time_posted": time_posted,
+                    "time_found": self.time_checked,
+                }
+            )
         listing_df = pd.DataFrame(listing_data)
+        listing_df.drop_duplicates(inplace=True)
         return listing_df
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-q", "--query", help="Search Query", type=str, required=True)
+    parser.add_argument(
+        "-la", "--lat", help="Latitude of search location", type=str, default="40.7128"
+    )
+    parser.add_argument(
+        "-lo",
+        "--long",
+        help="Longitude of search location",
+        type=str,
+        default="-74.0060",
+    )
+    parser.add_argument(
+        "-d", "--dist", help="Distance or search radius", type=str, default="50"
+    )
+    args = parser.parse_args()
 
-    user_search = OfferUp("iphone", "40.7128", "-74.0060")
+    user_search = Craiglist(args.query, args.lat, args.long, args.dist)
     user_search.check_new_listings()
