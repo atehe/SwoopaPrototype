@@ -23,6 +23,8 @@ class OfferUp:
         query: str,
         lat: str,
         long: str,
+        min_price: str = None,
+        max_price: str = None,
         distance: str = "50",
         limit: str = "50",
         sort_by: str = "-posted",
@@ -31,6 +33,8 @@ class OfferUp:
         self.lat = lat
         self.long = long
         self.distance = distance
+        self.min_price = min_price
+        self.max_price = max_price
         self.payload = {
             "query": "query GetModularFeed($searchParams: [SearchParam], $debug: Boolean = false) {  modularFeed(params: $searchParams, debug: $debug) {    analyticsData {      requestId      searchPerformedEventUniqueId      searchSessionId      __typename    }    categoryInfo {      categoryId      isForcedCategory      __typename    }    feedAdditions    filters {      ...modularFilterNumericRange      ...modularFilterSelectionList      __typename    }    legacyFeedOptions {      ...legacyFeedOptionListSelection      ...legacyFeedOptionNumericRange      __typename    }    looseTiles {      ...modularTileBanner      ...modularTileBingAd      ...modularTileGoogleDisplayAd      ...modularTileJob      ...modularTileEmptyState      ...modularTileListing      ...modularTileLocalDisplayAd      ...modularTileSearchAlert      ...modularTileSellerAd      ...modularModuleTileAdsPostXAd      __typename    }    modules {      ...modularGridModule      __typename    }    pageCursor    query {      ...modularQueryInfo      __typename    }    requestTimeMetadata {      resolverComputationTimeSeconds      serviceRequestTimeSeconds      totalResolverTimeSeconds      __typename    }    searchAlert {      alertId      alertStatus      __typename    }    debugInformation @include(if: $debug) {      rankedListings {        listingId        attributes {          key          value          __typename        }        __typename      }      lastViewedItems {        listingId        attributes {          key          value          __typename        }        __typename      }      categoryAffinities {        affinity        count        decay        affinityOwner        __typename      }      rankingStats {        key        value        __typename      }      __typename    }    __typename  }}fragment modularFilterNumericRange on ModularFeedNumericRangeFilter {  isExpandedHighlight  lowerBound {    ...modularFilterNumericRangeBound    __typename  }  shortcutLabel  shortcutRank  subTitle  targetName  title  type  upperBound {    ...modularFilterNumericRangeBound    __typename  }  __typename}fragment modularFilterNumericRangeBound on ModularFeedNumericRangeFilterNumericRangeBound {  label  limit  placeholderText  targetName  value  __typename}fragment modularFilterSelectionList on ModularFeedSelectionListFilter {  targetName  title  subTitle  shortcutLabel  shortcutRank  type  isExpandedHighlight  options {    ...modularFilterSelectionListOption    __typename  }  __typename}fragment modularFilterSelectionListOption on ModularFeedSelectionListFilterOption {  isDefault  isSelected  label  subLabel  value  __typename}fragment legacyFeedOptionListSelection on FeedOptionListSelection {  label  labelShort  name  options {    default    label    labelShort    selected    subLabel    value    __typename  }  position  queryParam  type  __typename}fragment legacyFeedOptionNumericRange on FeedOptionNumericRange {  label  labelShort  leftQueryParam  lowerBound  name  options {    currentValue    label    textHint    __typename  }  position  rightQueryParam  type  units  upperBound  __typename}fragment modularTileBanner on ModularFeedTileBanner {  tileId  tileType  title  __typename}fragment modularTileBingAd on ModularFeedTileBingAd {  tileId  bingAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    adSettings {      repeatClickRefractoryPeriodMillis      __typename    }    bingClientId    clickFeedbackUrl    clickReturnUrl    contentUrl    deepLinkEnabled    experimentDataHash    image {      height      url      width      __typename    }    impressionFeedbackUrl    impressionUrls    viewableImpressionUrls    installmentInfo {      amount      description      downPayment      __typename    }    itemName    lowPrice    price    searchId    sellerName    templateFields {      key      value      __typename    }    __typename  }  tileType  __typename}fragment modularTileGoogleDisplayAd on ModularFeedTileGoogleDisplayAd {  tileId  googleDisplayAd {    ouAdId    additionalSizes    adExperimentId    adHeight    adNetwork    adPage    adRequestId    adTileType    adWidth    adaptive    channel    clickFeedbackUrl    clientId    contentUrl    customTargeting {      key      values      __typename    }    displayAdType    errorDrawable {      actionPath      listImage {        height        url        width        __typename      }      __typename    }    experimentDataHash    formatIds    impressionFeedbackUrl    personalizationProperties {      key      values      __typename    }    prebidConfigs {      key      values {        timeout        tamSlotUUID        liftoffPlacementIDs        __typename      }      __typename    }    renderLocation    searchId    searchQuery    templateId    __typename  }  tileType  __typename}fragment modularTileJob on ModularFeedTileJob {  tileId  tileType  job {    address {      city      state      zipcode      __typename    }    companyName    datePosted    image {      height      url      width      __typename    }    industry    jobId    jobListingUrl    jobOwnerId    pills {      text      type      __typename    }    title    apply {      method      value      __typename    }    wageDisplayValue    provider    __typename  }  __typename}fragment modularTileEmptyState on ModularFeedTileEmptyState {  tileId  tileType  title  description  iconType  __typename}fragment modularTileListing on ModularFeedTileListing {  tileId  listing {    ...modularListing    __typename  }  tileType  __typename}fragment modularListing on ModularFeedListing {  listingId  conditionText  flags  image {    height    url    width    __typename  }  isFirmPrice  locationName  price  title  vehicleMiles  __typename}fragment modularTileLocalDisplayAd on ModularFeedTileLocalDisplayAd {  tileId  localDisplayAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    advertiserId    businessName    callToAction    callToActionType    clickFeedbackUrl    contentUrl    experimentDataHash    headline    image {      height      url      width      __typename    }    impressionFeedbackUrl    searchId    __typename  }  tileType  __typename}fragment modularTileSearchAlert on ModularFeedTileSearchAlert {  tileId  tileType  title  __typename}fragment modularTileSellerAd on ModularFeedTileSellerAd {  tileId  listing {    ...modularListing    __typename  }  sellerAd {    ouAdId    adId    adExperimentId    adNetwork    adRequestId    adTileType    clickFeedbackUrl    experimentDataHash    impressionFeedbackUrl    searchId    __typename  }  tileType  __typename}fragment modularModuleTileAdsPostXAd on ModularFeedTileAdsPostXAd {  ...modularTileAdsPostXAd  moduleId  moduleRank  moduleType  __typename}fragment modularTileAdsPostXAd on ModularFeedTileAdsPostXAd {  tileId  adsPostXAd {    ouAdId    adExperimentId    adNetwork    adRequestId    adTileType    clickFeedbackUrl    experimentDataHash    impressionFeedbackUrl    searchId    offer {      beacons {        noThanksClick        close        __typename      }      title      description      clickUrl      image      pixel      ctaYes      ctaNo      __typename    }    __typename  }  tileType  __typename}fragment modularGridModule on ModularFeedModuleGrid {  moduleId  collection  formFactor  grid {    actionPath    tiles {      ...modularModuleTileBingAd      ...modularModuleTileGoogleDisplayAd      ...modularModuleTileListing      ...modularModuleTileLocalDisplayAd      ...modularModuleTileSellerAd      __typename    }    __typename  }  moduleType  rank  rowIndex  searchId  subTitle  title  infoActionPath  __typename}fragment modularModuleTileBingAd on ModularFeedTileBingAd {  ...modularTileBingAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileGoogleDisplayAd on ModularFeedTileGoogleDisplayAd {  ...modularTileGoogleDisplayAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileListing on ModularFeedTileListing {  ...modularTileListing  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileLocalDisplayAd on ModularFeedTileLocalDisplayAd {  ...modularTileLocalDisplayAd  moduleId  moduleRank  moduleType  __typename}fragment modularModuleTileSellerAd on ModularFeedTileSellerAd {  ...modularTileSellerAd  moduleId  moduleRank  moduleType  __typename}fragment modularQueryInfo on ModularFeedQueryInfo {  appliedQuery  decisionType  originalQuery  suggestedQuery  __typename}",
             "variables": {
@@ -46,6 +50,15 @@ class OfferUp:
                 ],
             },
         }
+
+        if self.min_price:
+            self.payload["variables"]["searchParams"].append(
+                {"key": "PRICE_MIN", "value": min_price}
+            )
+        if self.max_price:
+            self.payload["variables"]["searchParams"].append(
+                {"key": "PRICE_MAX", "value": max_price}
+            )
 
     def new_listings_filename(self):
 
@@ -103,7 +116,10 @@ class OfferUp:
         listing_data = []
 
         for record in records:
-            if record.get("tileType").lower() == "listing":
+            if record.get("listing"):
+
+                listing_type = record.get("tileType")
+                listing_type_name = record.get("__typename")
                 listing = record.get("listing")
                 listing_id = listing.get("listingId")
                 condition_text = listing.get("conditionText")
@@ -121,6 +137,8 @@ class OfferUp:
                         "query": self.query,
                         "lat": self.lat,
                         "long": self.long,
+                        "listing_type": listing_type,
+                        "listing_type_name": listing_type_name,
                         "listing_id": listing_id,
                         "condition_text": condition_text,
                         "flags": flags,
@@ -154,7 +172,19 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d", "--dist", help="Distance or search radius", type=str, default="50"
     )
+    parser.add_argument(
+        "-min", "--min_price", help="Minimum Price of result", type=str, default=None
+    )
+    parser.add_argument(
+        "-max", "--max_price", help="Maximum Price of result", type=str, default=None
+    )
     args = parser.parse_args()
 
-    user_search = OfferUp(args.query, str(args.lat), str(args.long))
+    user_search = OfferUp(
+        args.query,
+        str(args.lat),
+        str(args.long),
+        min_price=str(args.min_price),
+        max_price=str(args.max_price),
+    )
     user_search.check_new_listings()
