@@ -1,21 +1,33 @@
 import pandas as pd
 from datetime import datetime
 import os
-
-from parsel import Selector
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import chromedriver_binary  # noqa: F401
+import requests
 import argparse
+from craiglist_categories import CATEGORIES
+import json
 
 
 DATA_FOLDER = "./data/craiglist"
 LISTINGS_DB = f"{DATA_FOLDER}/LISING_DB.csv"
 
+API_URL = "https://sapi.craigslist.org/web/v8/postings/search/full"
+HEADERS = {
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+}
+
 os.makedirs(DATA_FOLDER, exist_ok=True)
+
+
+def get_item_attribute(id, item_list):
+    for rec in item_list:
+        if isinstance(rec, list) and len(rec) > 1 and rec[0] == id:
+            attribute = rec
+            break
+    else:
+        return [None]
+
+    return attribute[1:]
 
 
 class Craiglist:
@@ -25,51 +37,39 @@ class Craiglist:
         query: str,
         lat: float,
         long: float,
-        distance: str = "50",
+        distance: str = "60",
         sort_by: str = "date",
     ):
         self.query = query
         self.lat = lat
         self.long = long
         self.distance = distance
-        self.search_url = f"https://ksu.craigslist.org/search/sss?lat={self.lat}&lon={self.long}&query={self.query}&search_distance={self.distance}&sort={sort_by}"
+
+        self.params = {
+            "lat": self.lat,
+            "lon": self.long,
+            "search_distance": self.distance,
+            "query": self.query,
+            "sort": sort_by,
+            "cc": "US",
+            "batch": "39-0-360-1-0",
+            "lang": "en",
+            "searchPath": "sss",
+        }
 
     def new_listings_filename(self):
 
         return f"{DATA_FOLDER}/NEW_LISTINGS_{self.time_checked}.csv"
 
-    def create_browser(self):
-        options = Options()
-
-        options.add_argument("--headless")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        driver = webdriver.Chrome(options=options)
-        return driver
-
-    def wait_for(self, xpath, clickable=False, timer=5):
-        wait = WebDriverWait(self.driver, timer)
-
-        # try:
-        if clickable:
-            element = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-        else:
-            element = wait.until(EC.presence_of_element_located((By.XPATH, xpath)))
-
-        return element
-        # except TimeoutException:
-        #     print("Element not found")
-
     def get_listings(self):
-        self.driver = self.create_browser()
-        self.driver.get(self.search_url)
-
-        self.wait_for('//div[@class="cl-search-results"]//li', timer=15)
-
-        page = Selector(self.driver.page_source)
+        response = requests.get(
+            API_URL,
+            headers=HEADERS,
+            params=self.params,
+        )
         self.time_checked = datetime.now().timestamp()
 
-        listings_df = self.parse_listing(page)
+        listings_df = self.parse_listing(response.json())
         return listings_df
 
     def check_new_listings(self):
@@ -112,22 +112,69 @@ class Craiglist:
         new_listings_df.to_csv(
             LISTINGS_DB, mode="a", index=None, header=not os.path.exists(LISTINGS_DB)
         )
-        self.driver.quit()
 
-    def parse_listing(self, page):
+    def parse_listing(self, resp):
 
-        records = page.xpath('//div[@class="cl-search-results"]//li')
+        data = resp.get("data")
+
+        decode = data.get("decode")
+        locations = decode.get("locations")
+
+        formatted_locs = []
+        for location in locations:
+
+            try:
+
+                subdomain = location[1] if len(location) > 1 else None
+                subregion = location[2] if len(location) > 2 else None
+
+                formatted_locs.append(
+                    {
+                        "subdomain": subdomain,
+                        "subregion": subregion,
+                    }
+                )
+            except TypeError:
+                formatted_locs.append({})
+
+        min_post_id = decode.get("minPostingId")
+        min_post_date = decode.get("minPostedDate")
+
         listing_data = []
 
-        for record in records:
+        items = data.get("items")
 
-            listing_id = record.xpath(".//@data-pid").get()
-            # image_url = ", ".join(record.xpath(".//img/@src").getall())
-            price = record.xpath('.//span[@class="priceinfo"]//text()').get()
-            title = record.xpath(".//@title").get()
-            url = record.xpath(".//a/@href").get()
-            time_posted = record.xpath('.//div[@class="meta"]/text()[1]').get()
-            location = record.xpath('.//div[@class="meta"]/text()[2]').get()
+        for item in items:
+
+            listing_id = item[0] + min_post_id
+            time_posted = item[1] + min_post_date
+            category = CATEGORIES.get(item[2])
+
+            location = item[4]
+
+            index, lat, long = location.split("~")
+            index = index.split(":")[0]
+
+            subregion = formatted_locs[int(index)].get("subregion")
+            subdomain = formatted_locs[int(index)].get("subdomain")
+
+            images = get_item_attribute(4, item)
+
+            images = [
+                f"https://images.craigslist.org/{image.split(':')[-1 ]}_600x450.jpg"
+                for image in images
+                if isinstance(image, str)
+            ]
+
+            price = get_item_attribute(10, item)[0]
+            handle = get_item_attribute(6, item)[0]
+
+            title = item[-1]
+
+            if subregion:
+                url = f"https://{subdomain}.craigslist.org/{subregion}/{category}/d/{handle}/{listing_id}.html"
+            else:
+                url = f"https://{subdomain}.craigslist.org/{category}/d/{handle}/{listing_id}.html"
 
             listing_data.append(
                 {
@@ -136,10 +183,10 @@ class Craiglist:
                     "long": self.long,
                     "listing_id": listing_id,
                     "title": title,
-                    # "image_url": image_url,
+                    "location": f"{lat}, {long}",
+                    "image_url": images[0] if images else None,
                     "price": price,
                     "url": url,
-                    "location": location,
                     "time_posted": time_posted,
                     "time_found": self.time_checked,
                 }
