@@ -37,6 +37,8 @@ class Craiglist:
         query: str,
         lat: float,
         long: float,
+        min_price: str = None,
+        max_price: str = None,
         distance: str = "60",
         sort_by: str = "date",
     ):
@@ -44,6 +46,8 @@ class Craiglist:
         self.lat = lat
         self.long = long
         self.distance = distance
+        self.min_price = min_price
+        self.max_price = max_price
 
         self.params = {
             "lat": self.lat,
@@ -56,6 +60,12 @@ class Craiglist:
             "lang": "en",
             "searchPath": "sss",
         }
+
+        if self.min_price:
+            self.params["min_price"] = int(min_price)
+
+        if self.max_price:
+            self.params["max_price"] = int(max_price)
 
     def new_listings_filename(self):
 
@@ -117,6 +127,8 @@ class Craiglist:
 
         data = resp.get("data")
 
+        source_url = data.get("canonicalUrl", "").strip("/")
+
         decode = data.get("decode")
         locations = decode.get("locations")
 
@@ -143,7 +155,6 @@ class Craiglist:
         listing_data = []
 
         items = data.get("items")
-
         for item in items:
 
             listing_id = item[0] + min_post_id
@@ -189,6 +200,7 @@ class Craiglist:
                     "url": url,
                     "time_posted": time_posted,
                     "time_found": self.time_checked,
+                    "source_url": source_url,
                 }
             )
         listing_df = pd.DataFrame(listing_data)
@@ -212,7 +224,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "-d", "--dist", help="Distance or search radius", type=str, default="50"
     )
+    parser.add_argument(
+        "-min", "--min_price", help="Minimum Price of result", type=str, default=None
+    )
+    parser.add_argument(
+        "-max", "--max_price", help="Maximum Price of result", type=str, default=None
+    )
     args = parser.parse_args()
 
-    user_search = Craiglist(args.query, args.lat, args.long, args.dist)
+    user_search = Craiglist(
+        args.query,
+        args.lat,
+        args.long,
+        min_price=args.min_price,
+        max_price=args.max_price,
+        distance=args.dist,
+    )
     user_search.check_new_listings()
