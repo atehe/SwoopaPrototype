@@ -39,6 +39,8 @@ class Craiglist:
         long: float,
         min_price: str = None,
         max_price: str = None,
+        min_mileage: str = None,
+        max_mileage: str = None,
         distance: str = "60",
         sort_by: str = "date",
     ):
@@ -48,6 +50,8 @@ class Craiglist:
         self.distance = distance
         self.min_price = min_price
         self.max_price = max_price
+        self.min_mileage = min_mileage
+        self.max_mileage = max_mileage
 
         self.params = {
             "lat": self.lat,
@@ -62,10 +66,16 @@ class Craiglist:
         }
 
         if self.min_price:
-            self.params["min_price"] = int(min_price)
+            self.params["min_price"] = min_price
 
         if self.max_price:
-            self.params["max_price"] = int(max_price)
+            self.params["max_price"] = max_price
+
+        if self.min_mileage:
+            self.params["min_auto_year"] = min_mileage
+
+        if self.max_mileage:
+            self.params["max_auto_year"] = max_mileage
 
     def new_listings_filename(self):
 
@@ -84,6 +94,7 @@ class Craiglist:
 
     def check_new_listings(self):
         latest_listings_df = self.get_listings()
+
         if os.path.exists(LISTINGS_DB):
 
             old_listings_df = pd.read_csv(LISTINGS_DB)
@@ -129,7 +140,7 @@ class Craiglist:
 
         source_url = data.get("canonicalUrl", "").strip("/")
 
-        decode = data.get("decode")
+        decode = data.get("decode") or {}
         locations = decode.get("locations")
 
         formatted_locs = []
@@ -230,6 +241,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "-max", "--max_price", help="Maximum Price of result", type=str, default=None
     )
+    parser.add_argument(
+        "-min_mileage",
+        "--min_mileage",
+        help="Minimum Mileage of Vehicle",
+        type=str,
+        default=None,
+    )
+    parser.add_argument(
+        "-max_mileage",
+        "--max_mileage",
+        help="Maximum Mileage of Vehicle",
+        type=str,
+        default=None,
+    )
     args = parser.parse_args()
 
     user_search = Craiglist(
@@ -238,6 +263,8 @@ if __name__ == "__main__":
         args.long,
         min_price=args.min_price,
         max_price=args.max_price,
+        min_mileage=args.min_mileage,
+        max_mileage=args.max_mileage,
         distance=args.dist,
     )
     user_search.check_new_listings()
