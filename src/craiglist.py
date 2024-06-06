@@ -5,6 +5,7 @@ import requests
 import argparse
 from craiglist_categories import CATEGORIES
 import json
+import math
 
 
 DATA_FOLDER = "./data/craiglist"
@@ -30,6 +31,36 @@ def get_item_attribute(id, item_list):
     return attribute[1:]
 
 
+def calculate_distance(lat1: float, lon1: float, lat2: float, lon2: float):
+    """
+    Calculate the distance between two points
+
+    @param lat1: Latitude of point 1
+    @param lon1: Longitude of point 1
+    @param lat2: Latitude of point 2
+    @param lon2: Longitude of point 2
+    @return: Distance between the points
+    """
+    earth_radius = 6371.0  # Radius of the earth in km
+
+    lat1_rad = math.radians(float(lat1))
+    lon1_rad = math.radians(float(lon1))
+    lat2_rad = math.radians(float(lat2))
+    lon2_rad = math.radians(float(lon2))
+
+    dlon = lon2_rad - lon1_rad
+    dlat = lat2_rad - lat1_rad
+
+    a = (
+        math.sin(dlat / 2) ** 2
+        + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(dlon / 2) ** 2
+    )
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    distance = earth_radius * c
+
+    return distance
+
+
 class Craiglist:
 
     def __init__(
@@ -53,29 +84,70 @@ class Craiglist:
         self.min_mileage = min_mileage
         self.max_mileage = max_mileage
 
+        # self.params = {
+        #     "lat": self.lat,
+        #     "lon": self.long,
+        #     "search_distance": self.distance,
+        #     "query": self.query,
+        #     "sort": sort_by,
+        #     "cc": "US",
+        #     "batch": "39-0-360-1-0",
+        #     "lang": "en",
+        #     "searchPath": "sss",
+        # }
+        # self.params = {
+        #     "auto_make_model": "ford",
+        #     "auto_title_status:": [1, 2, 3, 5, 6],
+        #     "batch": "170-0-360-1-0",
+        #     "cc": "US",
+        #     "condition": [20, 30, 40, 50, 60],
+        #     "lat": 40.6731,
+        #     "lon": -74.3214,
+        #     "searchPath": "sss",
+        #     "query": "ford",
+        #     "search_distance": 150 * 0.621371,
+        #     "lang": "en",
+        #     "postedToday": "1",
+        #     "purveyor": "owner",
+        #     "sort": "date",
+        #     "srchType": "T",
+        # }
+
+        # if self.min_price:
+        #     self.params["min_price"] = min_price
+
+        # if self.max_price:
+        #     self.params["max_price"] = max_price
+
+        # if self.min_mileage:
+        #     self.params["min_auto_mile"] = min_mileage
+
+        # if self.max_mileage:
+        #     self.params["max_auto_mile"] = max_mileage
+
         self.params = {
-            "lat": self.lat,
-            "lon": self.long,
-            "search_distance": self.distance,
-            "query": self.query,
-            "sort": sort_by,
+            "auto_make_model": "ford",
+            "auto_title_status:": [1, 2, 3, 5, 6],
+            "batch": "170-0-360-1-0",
             "cc": "US",
-            "batch": "39-0-360-1-0",
-            "lang": "en",
+            "condition": [20, 30, 40, 50, 60],
+            "lat": 40.6731,
+            "lon": -74.3214,
             "searchPath": "sss",
+            "query": "ford",
+            "search_distance": 93.20565,
+            "lang": "en",
+            # "postedToday": "1",
+            "purveyor": "owner",
+            "sort": "date",
+            "srchType": "T",
+            "min_auto_year": 2003,
+            "max_auto_year": 2015,
+            "min_auto_miles": 0.0,
+            "max_auto_miles": 248548.4,
+            "min_price": 500.0,
+            "max_price": 30000.0,
         }
-
-        if self.min_price:
-            self.params["min_price"] = min_price
-
-        if self.max_price:
-            self.params["max_price"] = max_price
-
-        if self.min_mileage:
-            self.params["min_auto_year"] = min_mileage
-
-        if self.max_mileage:
-            self.params["max_auto_year"] = max_mileage
 
     def new_listings_filename(self):
 
@@ -88,6 +160,8 @@ class Craiglist:
             params=self.params,
         )
         self.time_checked = datetime.now().timestamp()
+
+        # print(response.json())
 
         listings_df = self.parse_listing(response.json())
         return listings_df
@@ -212,6 +286,7 @@ class Craiglist:
                     "time_posted": time_posted,
                     "time_found": self.time_checked,
                     "source_url": source_url,
+                    "distance": calculate_distance(self.lat, self.long, lat, long),
                 }
             )
         listing_df = pd.DataFrame(listing_data)
@@ -223,37 +298,41 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-q", "--query", help="Search Query", type=str, required=True)
     parser.add_argument(
-        "-la", "--lat", help="Latitude of search location", type=str, default="40.7128"
+        "-la", "--lat", help="Latitude of search location", type=str, default="40.6731"
     )
     parser.add_argument(
         "-lo",
         "--long",
         help="Longitude of search location",
         type=str,
-        default="-74.0060",
+        default="-74.3214",
     )
     parser.add_argument(
-        "-d", "--dist", help="Distance or search radius", type=str, default="50"
+        "-d",
+        "--dist",
+        help="Distance or search radius",
+        type=str,
+        default=f"{150*0.621371}",
     )
     parser.add_argument(
-        "-min", "--min_price", help="Minimum Price of result", type=str, default=None
+        "-min", "--min_price", help="Minimum Price of result", type=str, default=50000
     )
     parser.add_argument(
-        "-max", "--max_price", help="Maximum Price of result", type=str, default=None
+        "-max", "--max_price", help="Maximum Price of result", type=str, default=3000000
     )
     parser.add_argument(
         "-min_mileage",
         "--min_mileage",
         help="Minimum Mileage of Vehicle",
         type=str,
-        default=None,
+        default=0,
     )
     parser.add_argument(
         "-max_mileage",
         "--max_mileage",
         help="Maximum Mileage of Vehicle",
         type=str,
-        default=None,
+        default=400000 * 0.621371,
     )
     args = parser.parse_args()
 
