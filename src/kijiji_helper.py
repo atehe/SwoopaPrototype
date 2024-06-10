@@ -13,15 +13,12 @@ HEADERS = {
 }
 
 
-def get_location_from_coordinates(latitude, longitude):
-    return "Alb"
-
-
-def get_location_id(latitude, longitude):
-    location_name = get_location_from_coordinates(latitude, longitude)
+def get_location_id(location_name):
     place_id = get_place_suggestion(location_name)
 
     location = location_from_place(place_id)
+
+    print(location)
     location_id = location.get("id")
 
     return location_id
@@ -62,4 +59,65 @@ def get_place_suggestion(location_name):
 
     return place_id
 
-    pass
+
+def get_seo_url(
+    query,
+    location_id,
+    min_price=None,
+    max_price=None,
+    min_mileage=None,
+    max_mileage=None,
+    min_year=None,
+    max_year=None,
+    car_search=False,
+    limit=40,
+):
+    min_price = min_price * 100 if min_price != None else min_price
+    max_price = max_price * 100 if max_price != None else max_price
+
+    min_max_filter = {
+        "filterName": "price",
+        "minValue": min_price,
+        "maxValue": max_price,
+    }
+    car_year_filter = {
+        "filterName": "caryear",
+        "minValue": min_year,
+        "maxValue": max_year,
+    }
+    car_mileage_filter = {
+        "filterName": "carmileageinkms",
+        "minValue": min_mileage,
+        "maxValue": max_mileage,
+    }
+    car_category = 174
+    payload = {
+        "query": "query GetSeoUrl($input: SearchUrlInput!) {searchUrl(input: $input)}",
+        "variables": {
+            "input": {
+                "searchQuery": {
+                    "rangeFilters": [min_max_filter],
+                    "keywords": query,
+                    "location": {"id": location_id},
+                },
+                "sorting": {"by": "DATE", "direction": "DESC"},
+                "pagination": {"offset": 0, "limit": limit},
+            }
+        },
+    }
+
+    if car_search:
+        payload["variables"]["input"]["searchQuery"]["categoryId"] = car_category
+        payload["variables"]["input"]["searchQuery"]["rangeFilters"].append(
+            car_year_filter
+        )
+        payload["variables"]["input"]["searchQuery"]["rangeFilters"].append(
+            car_mileage_filter
+        )
+
+    response = requests.post(API_URL, headers=HEADERS, data=json.dumps(payload))
+
+    resp_json = response.json()
+
+    search_url = resp_json.get("data").get("searchUrl")
+    return search_url
