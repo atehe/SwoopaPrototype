@@ -90,6 +90,9 @@ def get_seo_url(
         "minValue": min_mileage,
         "maxValue": max_mileage,
     }
+    
+    # /tiktok_adhoc/app.py --google_sheet_url https://docs.google.com/spreadsheets/d/1PcXOaFf3gcSxgZ1mqn-lNl1hbjOrehqkn5M5wRAUjlw/edit#gid=0 --sheet_name Sheet1 --task_id manual__2024-06-20T05:49:13.443569+00:00 --download_type product_details --provider kratos --regions 'ID,MY,VN,PH,TH'  --project Regular --request_type recurring --download_prefix TikTok_products_daily_ID-MY-VN-PH-TH_1x_dalat_kratos --pool_size 20
+    print(location_id)
     car_category = 174
     payload = {
         "query": "query GetSeoUrl($input: SearchUrlInput!) {searchUrl(input: $input)}",

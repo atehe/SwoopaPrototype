@@ -10,6 +10,13 @@ import math
 API_URL = "https://api.ebay.com/buy/browse/v1/item_summary/search"
 USER_TOKEN = "v^1.1#i^1#I^3#r^0#f^0#p^1#t^H4sIAAAAAAAAAOVYe2wURRjv9YHWQrEBBRpiyhZJBHdvd++97Z1cX/RCr9f2ruUh2szuzvbW7u1uduZarg3alEAMBJ9BNIACCfEfERMeAXmEiNEY1CAx+IcoBpWARqMQMVE07m5LuVbCq5fYxPvnMt98883v95vvm5kdemBS8fy1jWt/n+K4J3/bAD2Q73AwJXTxpKIFpQX55UV5dJaDY9vA3IHCwYIL1QikFJ1rg0jXVAQrVqYUFXG2MUikDZXTAJIRp4IURBwWuHg42sSxFM3phoY1QVOIikhdkBBoj88FJNEvQreHZiXTql6LmdCChN/n8YiSj5EAL7okl9WPUBpGVISBioMES7NukvaSLJtgXBxLc7SHcgX8y4mKDmggWVNNF4omQjZczh5rZGG9OVSAEDSwGYQIRcIN8Vg4UlffnKh2ZsUKDesQxwCn0ehWrSbCig6gpOHNp0G2NxdPCwJEiHCGhmYYHZQLXwNzF/CHpOZ5xsfzbp51AyngFXMiZYNmpAC+OQ7LIoukZLtyUMUyztxKUVMN/iko4OFWsxkiUldh/bWmgSJLMjSCRH1NeFm4pYUIRYHRDXFcI+O9mqYDsqWtjvS63B4AaEkiTV6Sm/Uxw9MMxRoWecw8tZoqypZkqKJZwzXQxAzHKsNkKWM6xdSYEZawhSfbz3NNQb93ubWkQ2uYxknVWlWYMmWosJu31n9kNMaGzKcxHIkwtsMWKEgAXZdFYmynnYnDybMSBYkkxjrndPb29lK9LkozupwsTTPOpdGmuJCEKUDYvlatW/7yrQeQsk1FgOZIJHM4o5tYVpqZagJQu4iQOxDw0J5h3UfDCo21/suQxdk5uh5yVR/A7ecFH0O7/QJgaa83F/URGk5Rp4UD8iBDpuxU1RUgQFIw8yydgoYsci6PxLr8EiRFb0Ai3QEzbXmP6CUZCUIaQp4XAv7/T5ncbqLHoWBAnKNMz1GWi0hJ4o6ONiGztC3dswCn1MZWBqKI7NNTrQoAydbo4gWLAovVQCR4u7VwQ/K1imwqkzDnz5UAVq3nRoRGDWEojoteXNB02KIpspCZWAvsMsQWYOBMHCqKaRgXybCuR3K1U+eI3h1tEnfHOpfn039yNt2QFbISdmKxssYjMwDQZco6fShBSzk1YF47nFatm+ZOG/W4eMvmnXVCsTZJDrGVxaHLJmVTplCPQBkQaWnDvGdTMev2ldC6oWqeZtjQFAUaHePLa6uaU6k0BrwCJ1pZ5yDBZTDBjlrGxwRoL+seJy/BPkg7J9qWlLuNuPCxO7xQO0d/3Ify7B8z6HiPHnQczXc46Gr6YaaSnjOpoL2wYHI5kjGkZCBRSO5SzW9WA1LdMKMD2ciflndpx8bG2vL62Cvz+xOZk5s/zJuc9baw7Ql65sjrQnEBU5L11EDPvt5TxEydMcVcaS/LMi5TR89yuvJ6byHzYOH0cPmP0/u7cOKAVPnFW1WPrDi+cOfL9JQRJ4ejKK9w0JFXsvusRJRMbavCX3aSnUgt69v/kK/s/otdu1rk5hU9bN+5/HdWbOGPNsHP2/t/2rHl5EuPbtr/SeX7Tza/qcyZuXuefnDTN3/0rS6d1bjuo33PfuyNvv0b9cHViw1/nz126NfVZ/dMu3BkxsFSMu/VnVUv7r/v53vXPHd1yaatxtL2xVtOvHteX//0DwvPvLHs8Lff/XkcriHx+dOB4s9WVTqLnunfXBQT13861zH7a8cLNXu/2ndl75mrezYmn0+d+mve7MfXlV0Jda1SBhbGDjdtPxFN1vceOFWz63L19z19i0Tf6a6jTq677cKS6LTL0/ecK31t+6zDVRsuHSvbWrPh0JF2+Rf+issbm/r6A8zQWv4Dp2Pu6PURAAA="
 
+
+    scraped_df = pd.read_csv(PITSTOP_VEHICLE_TRIMS, dtype=str)
+    scraped_df.drop_duplicates(subset=columns, inplace=True)
+    
+    
+    vehicle_filter_df.merge(scraped_df[column], left_on=columns)
+
 HEADERS = {
     "Authorization": f"Bearer {USER_TOKEN}",
     "X-EBAY-C-MARKETPLACE-ID": "EBAY_US",
@@ -87,6 +94,7 @@ class eBay:
         return listings_df
 
     def check_new_listings(self):
+        return
         latest_listings_df = self.get_listings()
 
         if os.path.exists(LISTINGS_DB):
