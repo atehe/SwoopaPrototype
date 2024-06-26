@@ -50,6 +50,7 @@ YEAR_DICT = {
     8: "up_to_8",
     9: "up_to_9",
     10: "up_to_10",
+    11: "over_10",
 }
 
 
@@ -111,7 +112,7 @@ def get_closest_integer(integer_list, value, larger=True):
                 closest = num
                 break
         else:
-            return min(closest)
+            return min(integer_list)
 
     return closest
 
@@ -203,7 +204,7 @@ class GumTreeUK:
             "_in": "id,title,price,locations,pictures,start-date-time,user-id,link,account-id",
             "latitude": self.lat,
             "longitude": self.long,
-            # "categoryId": "2549",  # for sale category. Has to be there or filter do not worl
+            "categoryId": "2549",  # for sale category. Has to be there or filter do not worl
         }
 
         if self.min_price:
@@ -214,7 +215,7 @@ class GumTreeUK:
 
         if car_search:
             self.params["_in"] = (
-                "id,title,price,ad-type,locations,pictures,start-date-time,user-idlink,attributes,account-id"
+                "id,title,price,ad-type,locations,pictures,start-date-time,user-id,link,attributes,account-id"
             )
             self.params["attr[seller_type]"] = "private"
             self.params["categoryId"] = "9311"
@@ -227,8 +228,10 @@ class GumTreeUK:
                 self.params["attr[vehicle_mileage]"] = MILEAGE_DICT[closest_mileage]
 
             if self.max_year:
-                year_diff = get_year_difference_from_now(self.max_year)
-                closest_year_diff = get_closest_integer(YEAR_DICT.keys(), year_diff)
+                year_diff = get_year_difference_from_now(self.max_mileage)
+                closest_year_diff = get_closest_integer(
+                    YEAR_DICT.keys(), year_diff, larger=False
+                )  # verify which to use
                 self.params["attr[vehicle_registration_year]"] = YEAR_DICT[
                     closest_year_diff
                 ]
@@ -296,16 +299,23 @@ class GumTreeUK:
 
     def parse_listing(self, resp_text):
         root = ET.fromstring(resp_text)
-        ns = {
-            "ns0": "http://www.ebayclassifiedsgroup.com/schema/ad/v1",
-            "ns1": "http://www.ebayclassifiedsgroup.com/schema/types/v1",
-            "ns2": "http://www.ebayclassifiedsgroup.com/schema/location/v1",
-            "ns3": "http://www.ebayclassifiedsgroup.com/schema/picture/v1",
-        }
+        if car_search:
+            ns = {
+                "ns0": "http://www.ebayclassifiedsgroup.com/schema/ad/v1",
+                "ns1": "http://www.ebayclassifiedsgroup.com/schema/types/v1",
+                "ns2": "http://www.ebayclassifiedsgroup.com/schema/location/v1",
+                "ns3": "http://www.ebayclassifiedsgroup.com/schema/attribute/v1",
+                "ns4": "http://www.ebayclassifiedsgroup.com/schema/picture/v1",
+            }
+        else:
+            ns = {
+                "ns0": "http://www.ebayclassifiedsgroup.com/schema/ad/v1",
+                "ns1": "http://www.ebayclassifiedsgroup.com/schema/types/v1",
+                "ns2": "http://www.ebayclassifiedsgroup.com/schema/location/v1",
+                "ns3": "http://www.ebayclassifiedsgroup.com/schema/picture/v1",
+            }
 
-        # with open("check3.xml", "a") as file:
-        #     file.write(str(resp_text))
-
+        print(ns)
         pretty_print_and_save_xml(root, "check.xml")
         listing_data = []
 
@@ -323,19 +333,23 @@ class GumTreeUK:
                 ad.find("ns0:user-id", ns).text if ad.find("ns0:user-id", ns) else None
             )
             account_id = ad.find("ns0:account-id", ns).text
-
+            image_xpath = "ns3:pictures/ns3:picture/ns3:link[@rel='extrabig']"
+            print(image_xpath)
+            image_xpath = (
+                image_xpath.replace("ns3", "ns4") if car_search else image_xpath
+            )
             image = (
-                ad.find("ns3:pictures/ns3:picture/ns3:link[@rel='extrabig']", ns).get(
-                    "href"
+                ad.find(image_xpath, ns).get(
+                    "href",
                 )
-                if ad.find("ns3:pictures/ns3:picture/ns3:link[@rel='extrabig']", ns)
-                else None
+                # if ad.find(image_xpath, ns) is not None
+                # else None
             )
             print(image)
 
             url = (
-                ad.find("ns0:link [@rel='self-public-website']", ns).get("href")
-                # if ad.find("ns0:link[@rel='self-public-website']", ns)
+                ad.find("ns0:link[@rel='self-public-website']", ns).get("href")
+                # if ad.find("ns0:link[@rel='self-public-website']", ns) is not None
                 # else None
             )
             print(url)
@@ -355,17 +369,30 @@ class GumTreeUK:
             mileage = None
             year = None
 
-            # mileage = (
-            #     ad.find('ns3:attribute[@name="vehicle_mileage"]').get()
-            #     if ad.find('ns3:attribute[@name="vehicle_mileage"]')
-            #     else None
-            # )
-            # year = (
-            #     ad.find('ns3:attribute[@name="vehicle_registration_year"]').get()
-            #     if ad.find('ns3:attribute[@name="vehicle_registration_year"]')
-            #     else None
-            # )
-
+            mileage = (
+                ad.find(
+                    "ns3:attributes//ns3:attribute[@name='vehicle_mileage']//ns3:value",
+                    ns,
+                ).text
+                if ad.find(
+                    "ns3:attributes//ns3:attribute[@name='vehicle_mileage']//ns3:value",
+                    ns,
+                )
+                is not None
+                else None
+            )
+            year = (
+                ad.find(
+                    'ns3:attributes//ns3:attribute[@name="vehicle_registration_year"]//ns3:value',
+                    ns,
+                ).text
+                if ad.find(
+                    'ns3:attributes//ns3:attribute[@name="vehicle_registration_year"]//ns3:value',
+                    ns,
+                )
+                is not None
+                else None
+            )
             listing_data.append(
                 {
                     "query": self.query,
@@ -395,46 +422,6 @@ class GumTreeUK:
 
 
 if __name__ == "__main__":
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument("-q", "--query", help="Search Query", type=str, required=True)
-    # parser.add_argument(
-    #     "-la", "--lat", help="Latitude of search location", type=str, default="40.6731"
-    # )
-    # parser.add_argument(
-    #     "-lo",
-    #     "--long",
-    #     help="Longitude of search location",
-    #     type=str,
-    #     default="-74.3214",
-    # )
-    # parser.add_argument(
-    #     "-d",
-    #     "--dist",
-    #     help="Distance or search radius",
-    #     type=str,
-    #     default=f"{150*0.621371}",
-    # )
-    # parser.add_argument(
-    #     "-min", "--min_price", help="Minimum Price of result", type=str, default=50000
-    # )
-    # parser.add_argument(
-    #     "-max", "--max_price", help="Maximum Price of result", type=str, default=3000000
-    # )
-    # parser.add_argument(
-    #     "-min_mileage",
-    #     "--min_mileage",
-    #     help="Minimum Mileage of Vehicle",
-    #     type=str,
-    #     default=0,
-    # )
-    # parser.add_argument(
-    #     "-max_mileage",
-    #     "--max_mileage",
-    #     help="Maximum Mileage of Vehicle",
-    #     type=str,
-    #     default=400000 * 0.621371,
-    # )
-    # args = parser.parse_args()
     query = "toyota"
     lat = "51.5074"
     long = "-0.1278"
@@ -443,7 +430,7 @@ if __name__ == "__main__":
     min_mileage = 10000
     max_mileage = 150000
     distance = 50
-    car_search = False
+    car_search = True
     min_year = 2022
     max_year = 2015
 
@@ -451,12 +438,12 @@ if __name__ == "__main__":
         query=query,
         lat=lat,
         long=long,
-        # min_price=min_price,
-        # max_price=max_price,
+        min_price=min_price,
+        max_price=max_price,
         min_mileage=min_mileage,
         max_mileage=max_mileage,
         max_year=max_year,
-        min_year=min_year,
+        # min_year=min_year,
         radius=distance,
         car_search=car_search,
     )
